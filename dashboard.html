@@ -61,7 +61,12 @@
       const reader = new FileReader();
       reader.onload = function (e) {
         try {
-          collections = JSON.parse(e.target.result);
+          const json = JSON.parse(e.target.result);
+          // Clean and sanitize numbers
+          collections = json.map(entry => ({
+            name: entry.name || "பயனர்",
+            paid: parseFloat(entry.paid) || 0
+          }));
           alert("File loaded successfully. Click ▶️ Play to start.");
         } catch (err) {
           alert("Invalid JSON file.");
@@ -72,19 +77,14 @@
 
     function speak(text, callback) {
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'ta-IN'; // Tamil
-      utterance.voice = voice;
-
-      utterance.onend = () => {
-        callback && callback();
-      };
-
+      utterance.lang = 'ta-IN';
+      if (voice) utterance.voice = voice;
+      utterance.onend = () => callback && callback();
       window.speechSynthesis.speak(utterance);
     }
 
     function speakNext() {
       if (currentIndex >= collections.length) {
-        // Final summary
         const summary = `இன்று மொத்தம் ${collections.length} பேர் செலுத்தினர். மொத்த தொகை ரூபாய் ${totalAmount.toFixed(2)}`;
         speak(summary);
         isReading = false;
@@ -92,9 +92,10 @@
       }
 
       const entry = collections[currentIndex];
-      const paid = Number(entry.paid || 0);
-      const message = `${entry.name} ரூபாய் ${paid} செலுத்தினார்`;
-      totalAmount += paid;
+      const amount = entry.paid;
+      totalAmount += amount;
+
+      const message = `${entry.name} ரூபாய் ${amount} செலுத்தினார்`;
       currentIndex++;
 
       speak(message, () => {
@@ -110,41 +111,35 @@
         return;
       }
 
-      if (window.speechSynthesis.speaking) {
-        stopSpeech(); // Stop previous
-        setTimeout(startReading, 500);
-        return;
-      }
-
-      totalAmount = 0;
-      currentIndex = 0;
-      isReading = true;
-      speakNext();
+      stopSpeech(); // Stop if anything is running
+      setTimeout(() => {
+        totalAmount = 0;
+        currentIndex = 0;
+        isReading = true;
+        speakNext();
+      }, 300);
     }
 
     function pauseSpeech() {
-      window.speechSynthesis.pause();
+      speechSynthesis.pause();
     }
 
     function resumeSpeech() {
-      window.speechSynthesis.resume();
+      speechSynthesis.resume();
     }
 
     function stopSpeech() {
       isReading = false;
-      window.speechSynthesis.cancel();
+      speechSynthesis.cancel();
     }
 
-    // Load Tamil voice
     function loadTamilVoice() {
       const voices = speechSynthesis.getVoices();
       voice = voices.find(v => v.lang === 'ta-IN') || null;
     }
 
-    speechSynthesis.onvoiceschanged = loadTamilVoice;
-    window.onload = () => {
-      loadTamilVoice();
-    };
+    window.speechSynthesis.onvoiceschanged = loadTamilVoice;
+    window.onload = loadTamilVoice;
   </script>
 </body>
 </html>
