@@ -14,14 +14,15 @@
     h1 {
       color: #00bcd4;
     }
-    button {
+    button, input[type="file"] {
       background: #00bcd4;
       border: none;
       padding: 10px 20px;
       font-weight: bold;
       border-radius: 5px;
       cursor: pointer;
-      margin-top: 20px;
+      margin: 10px 10px 20px 0;
+      color: black;
     }
     button:hover {
       background-color: #26c6da;
@@ -29,59 +30,113 @@
   </style>
 </head>
 <body>
-  <h1>Daily Agent Collection Reader</h1>
-  <p>Automatically reads agent collection and final summary.</p>
+  <h1>📢 Agent Collection Reader</h1>
+  <p>This tool reads agent names, places, and paid amounts in Tamil voice.</p>
+
+  <input type="file" accept=".json" onchange="loadFromFile(event)">
+  <br/>
   <button onclick="speakData()">🔁 Read Again</button>
+  <button onclick="pauseSpeech()">⏸ Pause</button>
+  <button onclick="resumeSpeech()">▶️ Resume</button>
+  <button onclick="skipForward()">⏭ Skip</button>
 
   <script>
-    async function fetchJSON() {
-      try {
-        const response = await fetch('daily_agent_collection.json');
-        const data = await response.json();
-        return data;
-      } catch (e) {
-        alert("Error loading daily_agent_collection.json file.");
-        return [];
-      }
-    }
+    let collections = [];
+    let currentIndex = 0;
+    let totalAmount = 0;
+    let isSpeaking = false;
+    let speechQueue = [];
+    let speakingNow = false;
 
-    function speak(text) {
+    function speak(text, callback) {
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'en-IN'; // Indian English
+      utterance.lang = 'ta-IN';
+      utterance.rate = 0.9;
+      utterance.onend = () => {
+        speakingNow = false;
+        if (callback) callback();
+      };
+      speakingNow = true;
       window.speechSynthesis.speak(utterance);
     }
 
+    function pauseSpeech() {
+      if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
+        window.speechSynthesis.pause();
+      }
+    }
+
+    function resumeSpeech() {
+      if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+      }
+    }
+
+    function skipForward() {
+      if (speechQueue.length > 0) {
+        window.speechSynthesis.cancel();
+        readNext(); // skip to next
+      }
+    }
+
+    function loadFromFile(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          collections = JSON.parse(e.target.result);
+          currentIndex = 0;
+          totalAmount = 0;
+          speakData();
+        } catch (err) {
+          alert("Invalid JSON file.");
+        }
+      };
+      reader.readAsText(file);
+    }
+
     async function speakData() {
-      const collections = await fetchJSON();
       if (collections.length === 0) {
-        speak("No collections found for today.");
+        try {
+          const response = await fetch("daily_agent_collection.json");
+          collections = await response.json();
+        } catch {
+          speak("இன்றைய சேகரிப்பு JSON கோப்பு கிடைக்கவில்லை.");
+          return;
+        }
+      }
+
+      if (!collections.length) {
+        speak("சேகரிப்பு பதிவுகள் இல்லை.");
         return;
       }
 
-      let totalAmount = 0;
+      currentIndex = 0;
+      totalAmount = 0;
+      isSpeaking = true;
+      speechQueue = [...collections];
 
-      speak("Reading today's agent collection.");
-      for (const entry of collections) {
-        const message = `${entry.name}, from ${entry.place}, has paid rupees ${entry.paid}.`;
-        speak(message);
-        totalAmount += Number(entry.paid || 0);
-        await new Promise(resolve => setTimeout(resolve, 3000)); // Wait before next
-      }
-
-      // Final summary
-      const summary = `Total agents collected today: ${collections.length}. 
-        Total amount collected is rupees ${totalAmount}.`;
-
-      setTimeout(() => {
-        speak("Summary.");
-        speak(summary);
-      }, 3000);
+      speak("இன்றைய ஏஜெண்ட் சேகரிப்புகள்:", readNext);
     }
 
-    // Auto speak when page loads
-    window.onload = () => {
-      speakData();
-    };
+    function readNext() {
+      if (!isSpeaking || currentIndex >= speechQueue.length) {
+        speak(`மொத்த ஏஜெண்ட்கள்: ${collections.length}. மொத்த சேகரிப்பு: ரூபாய் ${totalAmount}.`);
+        isSpeaking = false;
+        return;
+      }
+
+      const entry = speechQueue[currentIndex++];
+      const name = entry.name || "பெயர் இல்லை";
+      const place = entry.place || "இடம் இல்லை";
+      const paid = Number(entry.paid || 0);
+      totalAmount += paid;
+
+      const msg = `${name}, ${place}, ரூபாய் ${paid} செலுத்தினார்.`;
+      speak(msg, () => setTimeout(readNext, 500));
+    }
   </script>
 </body>
-</html><!-- Dashboard HTML with manual ID support -->
+</html>
