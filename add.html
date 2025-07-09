@@ -1,124 +1,37 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Add Data - Customer Tracker</title>
-  <style>
-    body {
-      background-color: #121212;
-      color: #e0e0e0;
-      font-family: Arial, sans-serif;
-      padding: 20px;
-    }
-    h2 {
-      color: #ffffff;
-    }
-    input, button, select {
-      width: 100%;
-      max-width: 400px;
-      padding: 10px;
-      margin: 8px 0;
-      background-color: #1e1e1e;
-      color: #ffffff;
-      border: 1px solid #444;
-      border-radius: 5px;
-    }
-    button {
-      background-color: #333;
-      cursor: pointer;
-    }
-    .section {
-      background-color: #1e1e1e;
-      padding: 20px;
-      margin-bottom: 30px;
-      border-radius: 8px;
-      box-shadow: 0 0 10px #000;
-    }
-  </style>
+  <title>Test Backend</title>
 </head>
-<body>
-
-  <div class="section">
-    <h2>Add New Customer</h2>
-    <input type="text" id="cust_name" placeholder="Customer Name" />
-    <input type="text" id="cust_place" placeholder="Place" />
-    <input type="text" id="cust_phone" placeholder="Phone Number" />
-    <button onclick="addCustomer()">Add Customer</button>
-  </div>
-
-  <div class="section">
-    <h2>Add Product (What Customer Bought)</h2>
-    <input type="text" id="prod_customer_id" placeholder="Customer ID" />
-    <input type="text" id="prod_name" placeholder="Product Name" />
-    <input type="number" id="prod_cost" placeholder="Product Cost" />
-    <button onclick="addProduct()">Add Product</button>
-  </div>
-
-  <div class="section">
-    <h2>Add Payment Entry</h2>
-    <input type="text" id="payment_customer_id" placeholder="Customer ID" />
-    <input type="date" id="payment_date" />
-    <input type="number" id="payment_amount" placeholder="Amount Paid" />
-    <input type="text" id="payment_remark" placeholder="Remark (optional)" />
-    <button onclick="addPayment()">Add Payment</button>
-  </div>
+<body style="background:#111;color:#fff;padding:20px;font-family:sans-serif">
+  <h2>Add Customer Test</h2>
+  <input id="name" placeholder="Name" /><br>
+  <input id="place" placeholder="Place" /><br>
+  <input id="phone" placeholder="Phone" /><br>
+  <button onclick="addCustomer()">Add</button>
 
   <script>
     const scriptURL = "https://script.google.com/macros/s/AKfycbwXJ6gz_DKfzJDZ0sDw6hJtgsIObLhDYlVlwbF0R95L95xy-U4G57WQ6IGBnWmsl8E6/exec";
 
-    function sendData(data) {
-      fetch(scriptURL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      })
-      .then(res => res.text())
-      .then(msg => alert(msg))
-      .catch(err => {
-        console.error("Fetch error:", err);
-        alert("Failed to connect to backend.");
-      });
-    }
-
     function addCustomer() {
       const data = {
         action: "addCustomer",
-        name: document.getElementById("cust_name").value.trim(),
-        place: document.getElementById("cust_place").value.trim(),
-        phone: document.getElementById("cust_phone").value.trim()
+        name: document.getElementById("name").value,
+        place: document.getElementById("place").value,
+        phone: document.getElementById("phone").value
       };
-      if (!data.name || !data.place || !data.phone) {
-        return alert("Please fill all fields.");
-      }
-      sendData(data);
-    }
 
-    function addProduct() {
-      const data = {
-        action: "addProduct",
-        customerId: document.getElementById("prod_customer_id").value.trim(),
-        product: document.getElementById("prod_name").value.trim(),
-        cost: Number(document.getElementById("prod_cost").value.trim())
-      };
-      if (!data.customerId || !data.product || !data.cost) {
-        return alert("Please fill all fields.");
-      }
-      sendData(data);
-    }
-
-    function addPayment() {
-      const data = {
-        action: "addPayment",
-        customerId: document.getElementById("payment_customer_id").value.trim(),
-        date: document.getElementById("payment_date").value,
-        amount: Number(document.getElementById("payment_amount").value.trim()),
-        remark: document.getElementById("payment_remark").value.trim()
-      };
-      if (!data.customerId || !data.date || !data.amount) {
-        return alert("Please fill all required fields.");
-      }
-      sendData(data);
+      fetch(scriptURL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      })
+      .then(res => res.text())
+      .then(txt => alert("Response: " + txt))
+      .catch(err => {
+        alert("Error: " + err.message);
+        console.error(err);
+      });
     }
   </script>
 </body>
