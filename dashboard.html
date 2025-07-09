@@ -11,19 +11,17 @@
       font-family: Arial, sans-serif;
       padding: 20px;
     }
-    h1 {
-      color: #00bcd4;
-    }
-    input, button {
+    h1 { color: #00bcd4; }
+    button, input {
       padding: 10px 15px;
       margin: 10px 5px 0 0;
-      border: none;
       border-radius: 5px;
+      border: none;
       font-weight: bold;
     }
     button {
       background: #00bcd4;
-      color: #000;
+      color: black;
       cursor: pointer;
     }
     button:hover {
@@ -33,17 +31,16 @@
       margin-top: 20px;
     }
     #currentStatus {
-      margin-top: 20px;
-      font-size: 18px;
-      color: #aaa;
+      margin-top: 15px;
+      color: #bbb;
+      font-size: 16px;
     }
   </style>
 </head>
 <body>
   <h1>🎙️ Agent Collection Reader</h1>
-  <p>Upload your <code>daily_agent_collection.json</code> file to begin.</p>
+  <p>Upload your <code>daily_agent_collection.json</code> file below:</p>
   <input type="file" accept=".json" onchange="handleFile(event)">
-  
   <div id="controls" style="display:none;">
     <button onclick="playReader()">▶️ Play</button>
     <button onclick="pauseReader()">⏸️ Pause</button>
@@ -55,36 +52,41 @@
   <div id="currentStatus">📂 Waiting for file...</div>
 
   <script>
-    let collectionData = [];
-    let currentIndex = 0;
-    let totalPaid = 0;
+    let data = [];
+    let index = 0;
+    let total = 0;
     let isPaused = false;
     let isReading = false;
 
     const synth = window.speechSynthesis;
 
     function speak(text, callback) {
-      if (!text) return;
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'ta-IN'; // Tamil voice
-      utterance.onend = () => {
-        if (callback) callback();
-      };
-      synth.speak(utterance);
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = "ta-IN";
+      utter.onend = () => callback && callback();
+      synth.speak(utter);
+    }
+
+    function parseAmount(value) {
+      if (typeof value === "number") return value;
+      if (typeof value === "string") {
+        const clean = value.replace(/[^\d.]/g, ''); // remove ₹, commas, spaces
+        return parseFloat(clean) || 0;
+      }
+      return 0;
     }
 
     function handleFile(event) {
       const file = event.target.files[0];
-      if (!file) return;
       const reader = new FileReader();
       reader.onload = function (e) {
         try {
-          collectionData = JSON.parse(e.target.result);
-          currentIndex = 0;
-          totalPaid = 0;
+          data = JSON.parse(e.target.result);
+          index = 0;
+          total = 0;
           document.getElementById("controls").style.display = "block";
-          document.getElementById("currentStatus").innerText = "📋 File loaded. Click ▶️ Play to start reading.";
-        } catch (e) {
+          document.getElementById("currentStatus").innerText = "✅ File loaded. Click ▶️ to start.";
+        } catch {
           alert("Invalid JSON file.");
         }
       };
@@ -100,53 +102,53 @@
 
     function pauseReader() {
       isPaused = true;
-      synth.cancel(); // stop current speech
-      document.getElementById("currentStatus").innerText = "⏸️ Paused";
+      synth.cancel();
+      document.getElementById("currentStatus").innerText = "⏸️ Paused.";
     }
 
     function repeatReader() {
-      currentIndex = 0;
-      totalPaid = 0;
+      index = 0;
+      total = 0;
       isPaused = false;
       isReading = true;
       readNext();
     }
 
     function nextReader() {
-      if (currentIndex < collectionData.length - 1) {
-        currentIndex++;
+      if (index < data.length - 1) {
+        index++;
         readNext();
       }
     }
 
     function prevReader() {
-      if (currentIndex > 0) {
-        currentIndex--;
+      if (index > 0) {
+        index--;
         readNext();
       }
     }
 
     function readNext() {
-      if (isPaused || currentIndex >= collectionData.length) {
+      if (isPaused || index >= data.length) {
         isReading = false;
-        speak(`மொத்த சேகரிப்பு: ரூபாய் ${totalPaid}`, () => {
-          document.getElementById("currentStatus").innerText = "✅ Reading complete.";
+        speak(`மொத்தமாக ரூபாய் ${total} வசூலிக்கப்பட்டது.`, () => {
+          document.getElementById("currentStatus").innerText = "✅ Summary complete.";
         });
         return;
       }
 
-      const entry = collectionData[currentIndex++];
+      const entry = data[index++];
       const name = entry.name || "பெயர் இல்லை";
       const place = entry.place || "இடம் இல்லை";
-      const paid = Number(String(entry.paid).replace(/[^0-9.]/g, "")) || 0;
+      const paid = parseAmount(entry.paid);
 
-      totalPaid += paid;
+      total += paid;
 
-      const message = `${name}, ${place}, ரூபாய் ${paid} செலுத்தினார்.`;
-      document.getElementById("currentStatus").innerText = `🎤 Speaking: ${message}`;
-      speak(message, () => setTimeout(() => {
+      const msg = `${name}, ${place}, ரூபாய் ${paid} செலுத்தினார்.`;
+      document.getElementById("currentStatus").innerText = `🎤 Speaking: ${msg}`;
+      speak(msg, () => setTimeout(() => {
         if (!isPaused) readNext();
-      }, 800));
+      }, 500));
     }
   </script>
 </body>
