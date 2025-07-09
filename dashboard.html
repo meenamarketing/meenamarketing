@@ -53,23 +53,23 @@
     let isReading = false;
     let currentIndex = 0;
     let totalAmount = 0;
-    let voice = null;
+    let tamilVoice = null;
 
     function loadFile(event) {
       const file = event.target.files[0];
       if (!file) return;
+
       const reader = new FileReader();
       reader.onload = function (e) {
         try {
-          const json = JSON.parse(e.target.result);
-          // Clean and sanitize numbers
-          collections = json.map(entry => ({
+          const data = JSON.parse(e.target.result);
+          collections = data.map(entry => ({
             name: entry.name || "பயனர்",
             paid: parseFloat(entry.paid) || 0
           }));
-          alert("File loaded successfully. Click ▶️ Play to start.");
+          alert("File loaded successfully.");
         } catch (err) {
-          alert("Invalid JSON file.");
+          alert("Invalid JSON file format.");
         }
       };
       reader.readAsText(file);
@@ -77,47 +77,50 @@
 
     function speak(text, callback) {
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'ta-IN';
-      if (voice) utterance.voice = voice;
+      utterance.lang = 'ta-IN'; // Tamil voice
+      if (tamilVoice) utterance.voice = tamilVoice;
+      utterance.rate = 1;
+      utterance.pitch = 1;
       utterance.onend = () => callback && callback();
-      window.speechSynthesis.speak(utterance);
+      speechSynthesis.speak(utterance);
     }
 
     function speakNext() {
       if (currentIndex >= collections.length) {
-        const summary = `இன்று மொத்தம் ${collections.length} பேர் செலுத்தினர். மொத்த தொகை ரூபாய் ${totalAmount.toFixed(2)}`;
+        const summary = `மொத்தம் ${collections.length} பேர் செலுத்தினர். 
+                         மொத்த தொகை ரூபாய் ${totalAmount.toFixed(2)}`;
         speak(summary);
         isReading = false;
         return;
       }
 
       const entry = collections[currentIndex];
-      const amount = entry.paid;
+      const amount = parseFloat(entry.paid);
+      const name = entry.name;
       totalAmount += amount;
 
-      const message = `${entry.name} ரூபாய் ${amount} செலுத்தினார்`;
+      const text = `${name} ரூபாய் ${amount.toFixed(2)} செலுத்தினார்`;
       currentIndex++;
 
-      speak(message, () => {
+      speak(text, () => {
         if (isReading) {
-          setTimeout(speakNext, 1000);
+          setTimeout(speakNext, 1500);
         }
       });
     }
 
     function startReading() {
-      if (collections.length === 0) {
-        alert("Please upload a valid JSON file first.");
+      if (!collections.length) {
+        alert("Please upload a valid JSON file.");
         return;
       }
 
-      stopSpeech(); // Stop if anything is running
-      setTimeout(() => {
-        totalAmount = 0;
-        currentIndex = 0;
-        isReading = true;
-        speakNext();
-      }, 300);
+      stopSpeech(); // reset previous
+      totalAmount = 0;
+      currentIndex = 0;
+      isReading = true;
+
+      speakNext();
     }
 
     function pauseSpeech() {
@@ -133,13 +136,13 @@
       speechSynthesis.cancel();
     }
 
-    function loadTamilVoice() {
+    function loadVoices() {
       const voices = speechSynthesis.getVoices();
-      voice = voices.find(v => v.lang === 'ta-IN') || null;
+      tamilVoice = voices.find(v => v.lang === 'ta-IN' || v.name.toLowerCase().includes('tamil')) || null;
     }
 
-    window.speechSynthesis.onvoiceschanged = loadTamilVoice;
-    window.onload = loadTamilVoice;
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    window.onload = loadVoices;
   </script>
 </body>
 </html>
