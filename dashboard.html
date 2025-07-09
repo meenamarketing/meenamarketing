@@ -1,1 +1,87 @@
-<!-- Dashboard HTML with manual ID support -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Agent Collection Reader</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      background: #121212;
+      color: #eee;
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    h1 {
+      color: #00bcd4;
+    }
+    button {
+      background: #00bcd4;
+      border: none;
+      padding: 10px 20px;
+      font-weight: bold;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+    button:hover {
+      background-color: #26c6da;
+    }
+  </style>
+</head>
+<body>
+  <h1>Daily Agent Collection Reader</h1>
+  <p>Automatically reads agent collection and final summary.</p>
+  <button onclick="speakData()">🔁 Read Again</button>
+
+  <script>
+    async function fetchJSON() {
+      try {
+        const response = await fetch('daily_agent_collection.json');
+        const data = await response.json();
+        return data;
+      } catch (e) {
+        alert("Error loading daily_agent_collection.json file.");
+        return [];
+      }
+    }
+
+    function speak(text) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'en-IN'; // Indian English
+      window.speechSynthesis.speak(utterance);
+    }
+
+    async function speakData() {
+      const collections = await fetchJSON();
+      if (collections.length === 0) {
+        speak("No collections found for today.");
+        return;
+      }
+
+      let totalAmount = 0;
+
+      speak("Reading today's agent collection.");
+      for (const entry of collections) {
+        const message = `${entry.name}, from ${entry.place}, has paid rupees ${entry.paid}.`;
+        speak(message);
+        totalAmount += Number(entry.paid || 0);
+        await new Promise(resolve => setTimeout(resolve, 3000)); // Wait before next
+      }
+
+      // Final summary
+      const summary = `Total agents collected today: ${collections.length}. 
+        Total amount collected is rupees ${totalAmount}.`;
+
+      setTimeout(() => {
+        speak("Summary.");
+        speak(summary);
+      }, 3000);
+    }
+
+    // Auto speak when page loads
+    window.onload = () => {
+      speakData();
+    };
+  </script>
+</body>
+</html><!-- Dashboard HTML with manual ID support -->
