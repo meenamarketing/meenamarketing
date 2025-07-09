@@ -11,145 +11,140 @@
       font-family: Arial, sans-serif;
       padding: 20px;
     }
-    h1 { color: #00bcd4; }
-    button, input {
-      padding: 10px 15px;
-      margin: 10px 5px 0 0;
+    h1 {
+      color: #00bcd4;
+    }
+    input[type="file"] {
+      margin-top: 15px;
+      background: #1e1e1e;
+      color: #fff;
+      border: 1px solid #444;
+      padding: 10px;
       border-radius: 5px;
-      border: none;
-      font-weight: bold;
     }
     button {
       background: #00bcd4;
-      color: black;
+      border: none;
+      padding: 10px 15px;
+      font-weight: bold;
+      border-radius: 5px;
       cursor: pointer;
+      margin-right: 10px;
+      margin-top: 20px;
     }
     button:hover {
       background-color: #26c6da;
     }
-    #controls {
-      margin-top: 20px;
-    }
-    #currentStatus {
-      margin-top: 15px;
-      color: #bbb;
-      font-size: 16px;
-    }
   </style>
 </head>
 <body>
-  <h1>🎙️ Agent Collection Reader</h1>
-  <p>Upload your <code>daily_agent_collection.json</code> file below:</p>
-  <input type="file" accept=".json" onchange="handleFile(event)">
-  <div id="controls" style="display:none;">
-    <button onclick="playReader()">▶️ Play</button>
-    <button onclick="pauseReader()">⏸️ Pause</button>
-    <button onclick="prevReader()">⏮️ Previous</button>
-    <button onclick="nextReader()">⏭️ Next</button>
-    <button onclick="repeatReader()">🔁 Repeat</button>
+
+  <h1>🎙️ Daily Agent Collection Reader</h1>
+  <input type="file" accept=".json" onchange="loadFile(event)">
+  <div>
+    <button onclick="startReading()">▶️ Play</button>
+    <button onclick="pauseSpeech()">⏸️ Pause</button>
+    <button onclick="resumeSpeech()">⏯️ Resume</button>
+    <button onclick="stopSpeech()">⏹️ Stop</button>
   </div>
 
-  <div id="currentStatus">📂 Waiting for file...</div>
-
   <script>
-    let data = [];
-    let index = 0;
-    let total = 0;
-    let isPaused = false;
+    let collections = [];
     let isReading = false;
+    let currentIndex = 0;
+    let totalAmount = 0;
+    let voice = null;
 
-    const synth = window.speechSynthesis;
-
-    function speak(text, callback) {
-      const utter = new SpeechSynthesisUtterance(text);
-      utter.lang = "ta-IN";
-      utter.onend = () => callback && callback();
-      synth.speak(utter);
-    }
-
-    function parseAmount(value) {
-      if (typeof value === "number") return value;
-      if (typeof value === "string") {
-        const clean = value.replace(/[^\d.]/g, ''); // remove ₹, commas, spaces
-        return parseFloat(clean) || 0;
-      }
-      return 0;
-    }
-
-    function handleFile(event) {
+    function loadFile(event) {
       const file = event.target.files[0];
+      if (!file) return;
       const reader = new FileReader();
       reader.onload = function (e) {
         try {
-          data = JSON.parse(e.target.result);
-          index = 0;
-          total = 0;
-          document.getElementById("controls").style.display = "block";
-          document.getElementById("currentStatus").innerText = "✅ File loaded. Click ▶️ to start.";
-        } catch {
+          collections = JSON.parse(e.target.result);
+          alert("File loaded successfully. Click ▶️ Play to start.");
+        } catch (err) {
           alert("Invalid JSON file.");
         }
       };
       reader.readAsText(file);
     }
 
-    function playReader() {
-      if (isReading) return;
-      isPaused = false;
-      isReading = true;
-      readNext();
+    function speak(text, callback) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'ta-IN'; // Tamil
+      utterance.voice = voice;
+
+      utterance.onend = () => {
+        callback && callback();
+      };
+
+      window.speechSynthesis.speak(utterance);
     }
 
-    function pauseReader() {
-      isPaused = true;
-      synth.cancel();
-      document.getElementById("currentStatus").innerText = "⏸️ Paused.";
-    }
-
-    function repeatReader() {
-      index = 0;
-      total = 0;
-      isPaused = false;
-      isReading = true;
-      readNext();
-    }
-
-    function nextReader() {
-      if (index < data.length - 1) {
-        index++;
-        readNext();
-      }
-    }
-
-    function prevReader() {
-      if (index > 0) {
-        index--;
-        readNext();
-      }
-    }
-
-    function readNext() {
-      if (isPaused || index >= data.length) {
+    function speakNext() {
+      if (currentIndex >= collections.length) {
+        // Final summary
+        const summary = `இன்று மொத்தம் ${collections.length} பேர் செலுத்தினர். மொத்த தொகை ரூபாய் ${totalAmount.toFixed(2)}`;
+        speak(summary);
         isReading = false;
-        speak(`மொத்தமாக ரூபாய் ${total} வசூலிக்கப்பட்டது.`, () => {
-          document.getElementById("currentStatus").innerText = "✅ Summary complete.";
-        });
         return;
       }
 
-      const entry = data[index++];
-      const name = entry.name || "பெயர் இல்லை";
-      const place = entry.place || "இடம் இல்லை";
-      const paid = parseAmount(entry.paid);
+      const entry = collections[currentIndex];
+      const paid = Number(entry.paid || 0);
+      const message = `${entry.name} ரூபாய் ${paid} செலுத்தினார்`;
+      totalAmount += paid;
+      currentIndex++;
 
-      total += paid;
-
-      const msg = `${name}, ${place}, ரூபாய் ${paid} செலுத்தினார்.`;
-      document.getElementById("currentStatus").innerText = `🎤 Speaking: ${msg}`;
-      speak(msg, () => setTimeout(() => {
-        if (!isPaused) readNext();
-      }, 500));
+      speak(message, () => {
+        if (isReading) {
+          setTimeout(speakNext, 1000);
+        }
+      });
     }
+
+    function startReading() {
+      if (collections.length === 0) {
+        alert("Please upload a valid JSON file first.");
+        return;
+      }
+
+      if (window.speechSynthesis.speaking) {
+        stopSpeech(); // Stop previous
+        setTimeout(startReading, 500);
+        return;
+      }
+
+      totalAmount = 0;
+      currentIndex = 0;
+      isReading = true;
+      speakNext();
+    }
+
+    function pauseSpeech() {
+      window.speechSynthesis.pause();
+    }
+
+    function resumeSpeech() {
+      window.speechSynthesis.resume();
+    }
+
+    function stopSpeech() {
+      isReading = false;
+      window.speechSynthesis.cancel();
+    }
+
+    // Load Tamil voice
+    function loadTamilVoice() {
+      const voices = speechSynthesis.getVoices();
+      voice = voices.find(v => v.lang === 'ta-IN') || null;
+    }
+
+    speechSynthesis.onvoiceschanged = loadTamilVoice;
+    window.onload = () => {
+      loadTamilVoice();
+    };
   </script>
 </body>
 </html>
