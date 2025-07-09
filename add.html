@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Add Entry - Customer Tracker</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial;
+      background-color: #121212;
+      color: #e0e0e0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: #1f1f1f;
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header h1 {
+      color: #00e676;
+      font-size: 20px;
+      margin: 0;
+    }
+
+    #menu-toggle {
+      display: none;
+      background: none;
+      border: none;
+      font-size: 24px;
+      color: #fff;
+    }
+
+    aside {
+      width: 220px;
+      background-color: #1f1f1f;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    nav a {
+      display: block;
+      padding: 10px 0;
+      color: #ccc;
+      text-decoration: none;
+    }
+
+    nav a:hover {
+      color: #fff;
+    }
+
+    .layout {
+      display: flex;
+      flex-grow: 1;
+    }
+
+    main {
+      flex-grow: 1;
+      padding: 20px;
+    }
+
+    .card {
+      background: #1e1e1e;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 8px #000;
+    }
+
+    input, button {
+      display: block;
+      padding: 10px;
+      margin: 8px 0;
+      width: 100%;
+      max-width: 400px;
+      background: #1e1e1e;
+      color: #fff;
+      border: 1px solid #333;
+      border-radius: 5px;
+    }
+
+    button {
+      background-color: #00e676;
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    @media (max-width: 768px) {
+      .layout {
+        flex-direction: column;
+      }
+      aside {
+        display: none;
+      }
+      aside.active {
+        display: block;
+      }
+      #menu-toggle {
+        display: inline;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>➕ Add Entry</h1>
+    <button id="menu-toggle" onclick="toggleMenu()">☰</button>
+  </header>
+
+  <div class="layout">
+    <aside id="sidebar">
+      <nav>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="customers.html">Customers</a>
+        <a href="add.html">Add Entry</a>
+        <a href="reports.html">Reports</a>
+      </nav>
+    </aside>
+
+    <main>
+      <div class="card">
+        <h2>Add New Customer</h2>
+        <input type="text" id="cust_name" placeholder="Customer Name" />
+        <input type="text" id="cust_place" placeholder="Place" />
+        <input type="text" id="cust_phone" placeholder="Phone Number" />
+        <button onclick="addCustomer()">Add Customer</button>
+      </div>
+
+      <div class="card">
+        <h2>Add Product (Purchase)</h2>
+        <input type="text" id="prod_cust_id" placeholder="Customer ID" />
+        <input type="text" id="prod_name" placeholder="Product Name" />
+        <input type="number" id="prod_cost" placeholder="Product Cost" />
+        <button onclick="addProduct()">Add Product</button>
+      </div>
+
+      <div class="card">
+        <h2>Add Payment</h2>
+        <input type="text" id="pay_cust_id" placeholder="Customer ID" />
+        <input type="date" id="pay_date" />
+        <input type="number" id="pay_amount" placeholder="Amount" />
+        <input type="text" id="pay_remark" placeholder="Remark (optional)" />
+        <button onclick="addPayment()">Add Payment</button>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const scriptURL = "https://script.google.com/macros/s/AKfycbwXJ6gz_DKfzJDZ0sDw6hJtgsIObLhDYlVlwbF0R95L95xy-U4G57WQ6IGBnWmsl8E6/exec";
+
+    function toggleMenu() {
+      document.getElementById("sidebar").classList.toggle("active");
+    }
+
+    function addCustomer() {
+      const data = {
+        action: "addCustomer",
+        name: document.getElementById("cust_name").value,
+        place: document.getElementById("cust_place").value,
+        phone: document.getElementById("cust_phone").value
+      };
+      sendData(data);
+    }
+
+    function addProduct() {
+      const data = {
+        action: "addProduct",
+        customerId: document.getElementById("prod_cust_id").value,
+        product: document.getElementById("prod_name").value,
+        cost: document.getElementById("prod_cost").value
+      };
+      sendData(data);
+    }
+
+    function addPayment() {
+      const data = {
+        action: "addPayment",
+        customerId: document.getElementById("pay_cust_id").value,
+        date: document.getElementById("pay_date").value,
+        amount: document.getElementById("pay_amount").value,
+        remark: document.getElementById("pay_remark").value
+      };
+      sendData(data);
+    }
+
+    function sendData(data) {
+      fetch(scriptURL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      })
+        .then(res => res.text())
+        .then(msg => alert(msg));
+    }
+  </script>
+</body>
+</html>

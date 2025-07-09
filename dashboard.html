@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard - Customer Tracker</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial;
+      background-color: #121212;
+      color: #e0e0e0;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      background: #1f1f1f;
+      color: #00e676;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    header h1 {
+      font-size: 20px;
+      margin: 0;
+    }
+    #menu-toggle {
+      display: none;
+      background: none;
+      border: none;
+      font-size: 24px;
+      color: #fff;
+    }
+    aside {
+      width: 220px;
+      background-color: #1f1f1f;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    nav a {
+      display: block;
+      padding: 10px 0;
+      color: #ccc;
+      text-decoration: none;
+    }
+    nav a:hover {
+      color: #fff;
+    }
+    .layout {
+      display: flex;
+      flex-grow: 1;
+      min-height: 100vh;
+    }
+    main {
+      flex-grow: 1;
+      padding: 20px;
+    }
+    .card {
+      background: #1e1e1e;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 0 8px #000;
+    }
+    .card h2 {
+      color: #00e676;
+    }
+    canvas {
+      width: 100% !important;
+      max-width: 600px;
+      background: #1e1e1e;
+      padding: 10px;
+      border-radius: 8px;
+    }
+    @media (max-width: 768px) {
+      .layout {
+        flex-direction: column;
+      }
+      aside {
+        display: none;
+      }
+      aside.active {
+        display: block;
+      }
+      #menu-toggle {
+        display: inline;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>📊 Dashboard</h1>
+    <button id="menu-toggle" onclick="toggleMenu()">☰</button>
+  </header>
+
+  <div class="layout">
+    <aside id="sidebar">
+      <nav>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="customers.html">Customers</a>
+        <a href="add.html">Add Entry</a>
+        <a href="reports.html">Reports</a>
+      </nav>
+    </aside>
+
+    <main>
+      <div class="card">
+        <h2>📋 Summary</h2>
+        <p>Total Customers: <span id="totalCustomers">0</span></p>
+        <p>Total Paid: ₹<span id="totalPaid">0</span></p>
+        <p>Total Due: ₹<span id="totalDue">0</span></p>
+      </div>
+
+      <div class="card">
+        <h2>📈 Payment Trends</h2>
+        <canvas id="summaryChart"></canvas>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const scriptURL = "https://script.google.com/macros/s/AKfycbwXJ6gz_DKfzJDZ0sDw6hJtgsIObLhDYlVlwbF0R95L95xy-U4G57WQ6IGBnWmsl8E6/exec";
+    
+    function toggleMenu() {
+      document.getElementById("sidebar").classList.toggle("active");
+    }
+
+    async function loadDashboard() {
+      const res = await fetch(`${scriptURL}?dashboard=true`);
+      const data = await res.json();
+      document.getElementById("totalCustomers").innerText = data.totalCustomers;
+      document.getElementById("totalPaid").innerText = data.totalPaid;
+      document.getElementById("totalDue").innerText = data.totalDue;
+
+      new Chart(document.getElementById("summaryChart"), {
+        type: "bar",
+        data: {
+          labels: ["Paid", "Due"],
+          datasets: [{
+            label: "Amount",
+            data: [data.totalPaid, data.totalDue],
+            backgroundColor: ["#00e676", "#ff5252"]
+          }]
+        },
+        options: {
+          plugins: {
+            legend: { display: false },
+            title: {
+              display: true,
+              text: "Financial Overview",
+              color: "#fff"
+            }
+          },
+          scales: {
+            x: { ticks: { color: "#ccc" } },
+            y: { ticks: { color: "#ccc" } }
+          }
+        }
+      });
+    }
+
+    loadDashboard();
+  </script>
+</body>
+</html>

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Customers - Customer Tracker</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial;
+      background-color: #121212;
+      color: #e0e0e0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: #1f1f1f;
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header h1 {
+      color: #00e676;
+      font-size: 20px;
+      margin: 0;
+    }
+
+    #menu-toggle {
+      display: none;
+      background: none;
+      border: none;
+      font-size: 24px;
+      color: #fff;
+    }
+
+    aside {
+      width: 220px;
+      background-color: #1f1f1f;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    nav a {
+      display: block;
+      padding: 10px 0;
+      color: #ccc;
+      text-decoration: none;
+    }
+
+    nav a:hover {
+      color: #fff;
+    }
+
+    .layout {
+      display: flex;
+      flex-grow: 1;
+    }
+
+    main {
+      flex-grow: 1;
+      padding: 20px;
+    }
+
+    input {
+      padding: 10px;
+      width: 100%;
+      max-width: 400px;
+      background: #1e1e1e;
+      border: 1px solid #333;
+      color: #fff;
+      border-radius: 5px;
+      margin-bottom: 20px;
+    }
+
+    .customer-card {
+      background: #1e1e1e;
+      padding: 15px;
+      margin-bottom: 10px;
+      border-radius: 5px;
+      box-shadow: 0 0 5px #000;
+      cursor: pointer;
+    }
+
+    .customer-card:hover {
+      background-color: #2a2a2a;
+    }
+
+    .details {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #aaa;
+    }
+
+    @media (max-width: 768px) {
+      .layout {
+        flex-direction: column;
+      }
+      aside {
+        display: none;
+      }
+      aside.active {
+        display: block;
+      }
+      #menu-toggle {
+        display: inline;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>👤 Customers</h1>
+    <button id="menu-toggle" onclick="toggleMenu()">☰</button>
+  </header>
+
+  <div class="layout">
+    <aside id="sidebar">
+      <nav>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="customers.html">Customers</a>
+        <a href="add.html">Add Entry</a>
+        <a href="reports.html">Reports</a>
+      </nav>
+    </aside>
+
+    <main>
+      <input type="text" id="search" placeholder="Search by name..." onkeyup="searchCustomer()">
+      <div id="customerList"></div>
+    </main>
+  </div>
+
+  <script>
+    const scriptURL = "https://script.google.com/macros/s/AKfycbwXJ6gz_DKfzJDZ0sDw6hJtgsIObLhDYlVlwbF0R95L95xy-U4G57WQ6IGBnWmsl8E6/exec";
+
+    function toggleMenu() {
+      document.getElementById("sidebar").classList.toggle("active");
+    }
+
+    async function fetchCustomers() {
+      const res = await fetch(`${scriptURL}?action=listCustomers`);
+      const data = await res.json();
+      window.allCustomers = data;
+      renderList(data);
+    }
+
+    function renderList(customers) {
+      const list = document.getElementById("customerList");
+      list.innerHTML = "";
+      customers.forEach(c => {
+        const div = document.createElement("div");
+        div.className = "customer-card";
+        div.innerHTML = `
+          <strong>${c.name}</strong> – ${c.place}<br>
+          <small>Phone: ${c.phone}</small>
+          <div class="details">
+            🛒 Products: ${c.totalProducts} | 💵 Paid: ₹${c.totalPaid} | ❗ Due: ₹${c.totalDue}
+          </div>
+        `;
+        div.onclick = () => alert(`Details for ${c.name}\n\n• Phone: ${c.phone}\n• Products: ${c.totalProducts}\n• Paid: ₹${c.totalPaid}\n• Due: ₹${c.totalDue}`);
+        list.appendChild(div);
+      });
+    }
+
+    function searchCustomer() {
+      const term = document.getElementById("search").value.toLowerCase();
+      const filtered = window.allCustomers.filter(c => c.name.toLowerCase().includes(term));
+      renderList(filtered);
+    }
+
+    fetchCustomers();
+  </script>
+</body>
+</html>
