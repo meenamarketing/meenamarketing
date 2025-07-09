@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Agent Audio Player</title>
+  <title>Agent Collection Reader</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
@@ -16,99 +16,121 @@
     }
     input, button {
       padding: 10px 15px;
-      margin: 10px 5px 20px 0;
+      margin: 10px 5px 0 0;
+      border: none;
       border-radius: 5px;
       font-weight: bold;
-      border: none;
-      cursor: pointer;
-    }
-    input[type="file"] {
-      background: #444;
-      color: white;
     }
     button {
       background: #00bcd4;
-      color: black;
+      color: #000;
+      cursor: pointer;
     }
     button:hover {
-      background: #26c6da;
+      background-color: #26c6da;
+    }
+    #controls {
+      margin-top: 20px;
     }
     #currentStatus {
       margin-top: 20px;
       font-size: 18px;
-      color: #90caf9;
+      color: #aaa;
     }
   </style>
 </head>
 <body>
-  <h1>📢 Agent Audio Player</h1>
-  <p>Reads uploaded collection data in Tamil, one by one.</p>
+  <h1>🎙️ Agent Collection Reader</h1>
+  <p>Upload your <code>daily_agent_collection.json</code> file to begin.</p>
+  <input type="file" accept=".json" onchange="handleFile(event)">
+  
+  <div id="controls" style="display:none;">
+    <button onclick="playReader()">▶️ Play</button>
+    <button onclick="pauseReader()">⏸️ Pause</button>
+    <button onclick="prevReader()">⏮️ Previous</button>
+    <button onclick="nextReader()">⏭️ Next</button>
+    <button onclick="repeatReader()">🔁 Repeat</button>
+  </div>
 
-  <input type="file" accept=".json" onchange="loadJSON(event)">
-  <br/>
-  <button onclick="startReading()">▶️ Play</button>
-  <button onclick="pauseReading()">⏸ Pause</button>
-  <button onclick="resumeReading()">🔁 Resume</button>
-  <button onclick="nextReading()">⏭ Next</button>
-
-  <div id="currentStatus">No data loaded.</div>
+  <div id="currentStatus">📂 Waiting for file...</div>
 
   <script>
     let collectionData = [];
     let currentIndex = 0;
     let totalPaid = 0;
     let isPaused = false;
-    let speaking = false;
+    let isReading = false;
 
-    function loadJSON(event) {
+    const synth = window.speechSynthesis;
+
+    function speak(text, callback) {
+      if (!text) return;
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'ta-IN'; // Tamil voice
+      utterance.onend = () => {
+        if (callback) callback();
+      };
+      synth.speak(utterance);
+    }
+
+    function handleFile(event) {
       const file = event.target.files[0];
       if (!file) return;
-
       const reader = new FileReader();
-      reader.onload = function(e) {
+      reader.onload = function (e) {
         try {
           collectionData = JSON.parse(e.target.result);
-          if (!Array.isArray(collectionData)) throw new Error("Invalid JSON");
           currentIndex = 0;
           totalPaid = 0;
-          document.getElementById("currentStatus").innerText = "Data loaded. Click Play to start.";
-        } catch {
+          document.getElementById("controls").style.display = "block";
+          document.getElementById("currentStatus").innerText = "📋 File loaded. Click ▶️ Play to start reading.";
+        } catch (e) {
           alert("Invalid JSON file.");
         }
       };
       reader.readAsText(file);
     }
 
-    function speak(text, callback) {
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'ta-IN'; // Tamil
-      utterance.rate = 0.9;
-      utterance.onend = () => {
-        speaking = false;
-        if (callback && !isPaused) callback();
-      };
-      speaking = true;
-      speechSynthesis.speak(utterance);
-    }
-
-    function startReading() {
-      if (!collectionData.length) {
-        alert("No data loaded!");
-        return;
-      }
-
-      currentIndex = 0;
-      totalPaid = 0;
+    function playReader() {
+      if (isReading) return;
       isPaused = false;
-      speechSynthesis.cancel(); // reset
-      document.getElementById("currentStatus").innerText = "Starting narration...";
+      isReading = true;
       readNext();
     }
 
+    function pauseReader() {
+      isPaused = true;
+      synth.cancel(); // stop current speech
+      document.getElementById("currentStatus").innerText = "⏸️ Paused";
+    }
+
+    function repeatReader() {
+      currentIndex = 0;
+      totalPaid = 0;
+      isPaused = false;
+      isReading = true;
+      readNext();
+    }
+
+    function nextReader() {
+      if (currentIndex < collectionData.length - 1) {
+        currentIndex++;
+        readNext();
+      }
+    }
+
+    function prevReader() {
+      if (currentIndex > 0) {
+        currentIndex--;
+        readNext();
+      }
+    }
+
     function readNext() {
-      if (currentIndex >= collectionData.length) {
+      if (isPaused || currentIndex >= collectionData.length) {
+        isReading = false;
         speak(`மொத்த சேகரிப்பு: ரூபாய் ${totalPaid}`, () => {
-          document.getElementById("currentStatus").innerText = "✅ Done reading all entries.";
+          document.getElementById("currentStatus").innerText = "✅ Reading complete.";
         });
         return;
       }
@@ -116,38 +138,15 @@
       const entry = collectionData[currentIndex++];
       const name = entry.name || "பெயர் இல்லை";
       const place = entry.place || "இடம் இல்லை";
-      const paid = parseFloat(entry.paid) || 0;
+      const paid = Number(String(entry.paid).replace(/[^0-9.]/g, "")) || 0;
 
       totalPaid += paid;
 
       const message = `${name}, ${place}, ரூபாய் ${paid} செலுத்தினார்.`;
-
-      document.getElementById("currentStatus").innerText = `Reading: ${message}`;
-      speak(message, () => setTimeout(readNext, 800));
-    }
-
-    function pauseReading() {
-      if (speechSynthesis.speaking) {
-        isPaused = true;
-        speechSynthesis.pause();
-        document.getElementById("currentStatus").innerText = "⏸ Paused.";
-      }
-    }
-
-    function resumeReading() {
-      if (speechSynthesis.paused) {
-        isPaused = false;
-        speechSynthesis.resume();
-        document.getElementById("currentStatus").innerText = "▶️ Resumed.";
-      }
-    }
-
-    function nextReading() {
-      if (speechSynthesis.speaking || speechSynthesis.paused) {
-        speechSynthesis.cancel();
-      }
-      isPaused = false;
-      readNext();
+      document.getElementById("currentStatus").innerText = `🎤 Speaking: ${message}`;
+      speak(message, () => setTimeout(() => {
+        if (!isPaused) readNext();
+      }, 800));
     }
   </script>
 </body>
