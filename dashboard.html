@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Agent Collection Reader</title>
+  <title>Agent Collection Reader (Tamil)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
@@ -15,11 +15,11 @@
       color: #00bcd4;
     }
     input[type="file"] {
-      margin-top: 15px;
       background: #1e1e1e;
       color: #fff;
-      border: 1px solid #444;
       padding: 10px;
+      margin: 10px 0;
+      border: 1px solid #444;
       border-radius: 5px;
     }
     button {
@@ -30,7 +30,7 @@
       border-radius: 5px;
       cursor: pointer;
       margin-right: 10px;
-      margin-top: 20px;
+      margin-top: 10px;
     }
     button:hover {
       background-color: #26c6da;
@@ -39,7 +39,8 @@
 </head>
 <body>
 
-  <h1>🎙️ Daily Agent Collection Reader</h1>
+  <h1>🎙️ Agent Collection Reader (Tamil)</h1>
+
   <input type="file" accept=".json" onchange="loadFile(event)">
   <div>
     <button onclick="startReading()">▶️ Play</button>
@@ -50,9 +51,9 @@
 
   <script>
     let collections = [];
-    let isReading = false;
     let currentIndex = 0;
     let totalAmount = 0;
+    let isReading = false;
     let tamilVoice = null;
 
     function loadFile(event) {
@@ -64,12 +65,12 @@
         try {
           const data = JSON.parse(e.target.result);
           collections = data.map(entry => ({
-            name: entry.name || "பயனர்",
-            paid: parseFloat(entry.paid) || 0
+            name: entry.name || "பெயரில்லா",
+            amount: parseFloat(entry.amount) || 0
           }));
-          alert("File loaded successfully.");
+          alert("✅ File loaded. Entries: " + collections.length);
         } catch (err) {
-          alert("Invalid JSON file format.");
+          alert("❌ Invalid JSON format.");
         }
       };
       reader.readAsText(file);
@@ -77,68 +78,71 @@
 
     function speak(text, callback) {
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'ta-IN'; // Tamil voice
+      utterance.lang = 'ta-IN';
       if (tamilVoice) utterance.voice = tamilVoice;
       utterance.rate = 1;
-      utterance.pitch = 1;
       utterance.onend = () => callback && callback();
       speechSynthesis.speak(utterance);
     }
 
     function speakNext() {
       if (currentIndex >= collections.length) {
-        const summary = `மொத்தம் ${collections.length} பேர் செலுத்தினர். 
-                         மொத்த தொகை ரூபாய் ${totalAmount.toFixed(2)}`;
+        const summary = `மொத்தம் ${collections.length} பேர் செலுத்தினர். மொத்த தொகை ரூபாய் ${totalAmount.toFixed(2)}.`;
         speak(summary);
         isReading = false;
         return;
       }
 
       const entry = collections[currentIndex];
-      const amount = parseFloat(entry.paid);
       const name = entry.name;
-      totalAmount += amount;
+      const amount = Number(entry.amount);
 
-      const text = `${name} ரூபாய் ${amount.toFixed(2)} செலுத்தினார்`;
+      if (isNaN(amount) || amount <= 0) {
+        currentIndex++;
+        speakNext();
+        return;
+      }
+
+      const message = `${name} ரூபாய் ${amount} செலுத்தினார்.`;
+      totalAmount += amount;
       currentIndex++;
 
-      speak(text, () => {
-        if (isReading) {
-          setTimeout(speakNext, 1500);
-        }
+      speak(message, () => {
+        if (isReading) setTimeout(speakNext, 1200);
       });
     }
 
     function startReading() {
       if (!collections.length) {
-        alert("Please upload a valid JSON file.");
+        alert("⚠️ Please upload a JSON file first.");
         return;
       }
-
-      stopSpeech(); // reset previous
-      totalAmount = 0;
+      stopSpeech();
       currentIndex = 0;
+      totalAmount = 0;
       isReading = true;
-
       speakNext();
     }
 
     function pauseSpeech() {
-      speechSynthesis.pause();
+      window.speechSynthesis.pause();
     }
 
     function resumeSpeech() {
-      speechSynthesis.resume();
+      window.speechSynthesis.resume();
     }
 
     function stopSpeech() {
+      window.speechSynthesis.cancel();
       isReading = false;
-      speechSynthesis.cancel();
     }
 
     function loadVoices() {
-      const voices = speechSynthesis.getVoices();
-      tamilVoice = voices.find(v => v.lang === 'ta-IN' || v.name.toLowerCase().includes('tamil')) || null;
+      const voices = window.speechSynthesis.getVoices();
+      tamilVoice = voices.find(v => v.lang === "ta-IN" || v.name.toLowerCase().includes("tamil"));
+      if (!tamilVoice) {
+        console.warn("⚠️ Tamil voice not found. Default will be used.");
+      }
     }
 
     window.speechSynthesis.onvoiceschanged = loadVoices;
